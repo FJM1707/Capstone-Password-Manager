@@ -1,0 +1,28 @@
+[project]
+name = "password-manager"
+version = "2.0.0"
+description = "Encrypted desktop password manager (Argon2id + AES-256-GCM, PySide6 GUI)"
+requires-python = ">=3.10"
+dependencies = [
+    "argon2-cffi>=23.1",
+    "cryptography>=42.0",
+    "PySide6>=6.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+password-manager = "password_manager.gui:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
