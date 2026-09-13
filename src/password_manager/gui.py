@@ -17,6 +17,8 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -30,7 +32,7 @@ from PySide6.QtWidgets import (
 
 from .config import DEFAULT_VAULT_PATH
 from .crypto import DecryptionError
-from .generator import GeneratorOptions, generate_password
+from .generator import GeneratorOptions, generate_password, suggest_passwords_from_phrase
 from .vault import Vault, VaultError
 
 CLIPBOARD_CLEAR_SECONDS = 20
@@ -101,6 +103,53 @@ class GeneratorDialog(QDialog):
         super().accept()
 
 
+class PhraseSuggestionDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Suggest Password from Phrase")
+        self.result_password = ""
+
+        layout = QVBoxLayout(self)
+
+        layout.addWidget(QLabel("Enter a memorable phrase (e.g. a sentence only you'd know):"))
+        self.phrase_edit = QLineEdit()
+        self.phrase_edit.returnPressed.connect(self._suggest)
+        layout.addWidget(self.phrase_edit)
+
+        suggest_btn = QPushButton("Suggest")
+        suggest_btn.clicked.connect(self._suggest)
+        layout.addWidget(suggest_btn)
+
+        layout.addWidget(QLabel("Pick one (each includes random characters for real strength - the phrase is just for memorability):"))
+        self.list_widget = QListWidget()
+        layout.addWidget(self.list_widget)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _suggest(self):
+        phrase = self.phrase_edit.text()
+        try:
+            suggestions = suggest_passwords_from_phrase(phrase)
+        except ValueError as exc:
+            QMessageBox.warning(self, "Cannot suggest", str(exc))
+            return
+        self.list_widget.clear()
+        for suggestion in suggestions:
+            self.list_widget.addItem(QListWidgetItem(suggestion))
+        self.list_widget.setCurrentRow(0)
+
+    def accept(self):
+        item = self.list_widget.currentItem()
+        if item is None:
+            QMessageBox.warning(self, "Nothing selected", "Enter a phrase and pick one of the suggestions")
+            return
+        self.result_password = item.text()
+        super().accept()
+
+
 class EntryDialog(QDialog):
     def __init__(self, parent=None, service="", username="", password="", notes="", editing_service=False):
         super().__init__(parent)
@@ -134,6 +183,10 @@ class EntryDialog(QDialog):
         gen_btn.clicked.connect(self._generate)
         pw_row.addWidget(gen_btn)
 
+        phrase_btn = QPushButton("From Phrase")
+        phrase_btn.clicked.connect(self._suggest_from_phrase)
+        pw_row.addWidget(phrase_btn)
+
         form.addRow("Password:", pw_row)
 
         self.notes_edit = QTextEdit(notes)
@@ -149,6 +202,11 @@ class EntryDialog(QDialog):
 
     def _generate(self):
         dialog = GeneratorDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.password_edit.setText(dialog.result_password)
+
+    def _suggest_from_phrase(self):
+        dialog = PhraseSuggestionDialog(self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.password_edit.setText(dialog.result_password)
 

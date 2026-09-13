@@ -18,6 +18,7 @@ This version:
   OWASP-recommended KDF (memory-hard, resistant to GPU/ASIC cracking, unlike PBKDF2)
 - Generates passwords with `secrets`, a CSPRNG, not `random`
 - Has a real GUI, built with **PySide6**
+- Can suggest passwords from a memorable phrase ("From Phrase" button next to the password field) - the phrase only shapes the suggestion's structure (camelCase, leetspeak, separators, acronym); a random suffix generated with `secrets` carries the actual entropy, so a guessable phrase doesn't produce a guessable password
 
 ## Security design
 
@@ -72,8 +73,9 @@ First run prompts you to create a master password; the vault is stored at
 pytest -v
 ```
 
-18 tests covering: encrypt/decrypt round-trips, wrong-password rejection, tamper detection,
-nonce uniqueness, vault CRUD, master-password rotation, and password-generator behavior.
+25 tests covering: encrypt/decrypt round-trips, wrong-password rejection, tamper detection,
+nonce uniqueness, vault CRUD, master-password rotation, and password-generator behavior
+(including phrase-based suggestions).
 
 ## Building a standalone executable (to share with others)
 
