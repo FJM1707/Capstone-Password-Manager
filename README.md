@@ -75,8 +75,42 @@ pytest -v
 18 tests covering: encrypt/decrypt round-trips, wrong-password rejection, tamper detection,
 nonce uniqueness, vault CRUD, master-password rotation, and password-generator behavior.
 
+## Building a standalone executable (to share with others)
+
+A recipient doesn't need Python installed — PyInstaller bundles the interpreter and every
+dependency into one `.exe`:
+
+```bash
+pip install -e ".[dev]"
+pyinstaller PasswordManager.spec
+# output: dist/PasswordManager.exe
+```
+
+Rebuild the `.spec` from scratch instead (e.g. after adding a new dependency) with:
+
+```bash
+pyinstaller --name PasswordManager --onefile --windowed --paths src launcher.py
+```
+
+**Things to know before sharing the `.exe`:**
+
+- **It's unsigned.** Windows SmartScreen will show an "unrecognized app" warning on first
+  run for anyone you send it to (including yourself on another machine). This is normal
+  for an unsigned indie build, not a sign anything is wrong — code-signing costs money
+  (a certificate) and isn't worth it for a portfolio project. Tell recipients to click
+  "More info" → "Run anyway".
+- **Antivirus false positives happen.** PyInstaller's onefile bootloader (self-extracting,
+  packs a Python interpreter) matches heuristics some AV engines flag on. Nothing to fix
+  on the code side; if it matters, VirusTotal-scan the built exe before sending it out so
+  you can show recipients it's clean.
+- **Each user gets their own vault.** The vault path (`~/.password_manager/vault.dat`) is
+  per-user by design — sharing the `.exe` does not share any vault data.
+- **Don't commit the built `.exe` to git.** It's a 50+ MB binary that changes on every
+  rebuild; `dist/` and `build/` are already gitignored. Distribute it via a GitHub
+  Release attached to a tag instead.
+
 ## Possible next steps
 
-- Cross-platform packaging (PyInstaller) for a distributable `.exe`/`.app`
 - Optional TOTP field per entry for 2FA codes
 - Auto-lock after N minutes of inactivity
+- Code-signing certificate if this moves beyond a portfolio piece
